@@ -2,6 +2,7 @@ package kittensclient;
 
 import java.awt.Image;
 import java.awt.Point;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 
@@ -24,6 +25,8 @@ public class Kitty extends JLabel {
     private final ImageIcon walkDown;
     /** Imagem ao receber carinho */
     private final ImageIcon petting;
+    /** Imagem anterior */
+    private Icon previousIcon;
 
     /**
      * Construtor
@@ -105,5 +108,29 @@ public class Kitty extends JLabel {
      */
     public void setIconDown() {
         setIcon(walkDown);
+    }
+    
+    /**
+     * Define o ícone do jogador quando é acariciado
+     */
+    public void setIconPet() {
+        if (getIcon() != petting) {
+            savePreviousIcon();
+        }
+        setIcon(petting);
+    }
+    
+    /**
+     * Restaura o ícone anterior
+     */
+    public void restoresPreviousIcon() {
+        setIcon(previousIcon);
+    }
+    
+    /**
+     * Salva o ícone atual do jogador
+     */
+    private void savePreviousIcon() {
+        previousIcon = getIcon();
     }
 }

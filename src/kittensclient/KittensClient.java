@@ -3,6 +3,8 @@ package kittensclient;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -54,6 +56,12 @@ public class KittensClient extends JFrame implements Runnable {
     private void initGui() {
         setTitle("Kittens");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                out.println("exiting");
+            }
+        });
         addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {}
@@ -72,6 +80,9 @@ public class KittensClient extends JFrame implements Runnable {
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
                     out.println("press_up");
                 }
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+                    out.println("pet");
+                }
             }
 
             @Override
@@ -87,6 +98,9 @@ public class KittensClient extends JFrame implements Runnable {
                 }
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
                     out.println("release_up");
+                }
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
+                    out.println("stop_petting");
                 }
             }
         });
@@ -116,26 +130,42 @@ public class KittensClient extends JFrame implements Runnable {
             while (true) {
                 command = in.readLine();
                 String data[] = command.split("\\_");
-                int i = Integer.parseInt(data[0]);
-                if (i >= kittens.size()) {
+                MessageType type = MessageType.valueOf(data[0]);
+                if (type == MessageType.NEW) {
                     kittens.add(new Kitty());
-                    getContentPane().add(kittens.get(kittens.size() - 1));
+                    int i = kittens.size() - 1;
+                    getContentPane().add(kittens.get(i));
                     repaint();
                 }
-                if (Integer.parseInt(data[1]) < kittens.get(i).getX()) {
-                    kittens.get(i).setIconLeft();
+                if (type == MessageType.MOV) {
+                    int i = Integer.parseInt(data[1]);
+                    if (data[4].equals("right")) {
+                        kittens.get(i).setIconRight();
+                    }
+                    if (data[4].equals("left")) {
+                        kittens.get(i).setIconLeft();
+                    }
+                    if (data[4].equals("down")) {
+                        kittens.get(i).setIconDown();
+                    }
+                    if (data[4].equals("up")) {
+                        kittens.get(i).setIconUp();
+                    }
+                    kittens.get(i).setPosition(new Point(Integer.parseInt(data[2]), Integer.parseInt(data[3])));
+                    kittens.get(i).move();
                 }
-                if (Integer.parseInt(data[1]) > kittens.get(i).getX()) {
-                    kittens.get(i).setIconRight();
+                if (type == MessageType.PET) {
+                    int i = Integer.parseInt(data[1]);
+                    kittens.get(i).setIconPet();
+                    Thread.sleep(300);
+                    kittens.get(i).restoresPreviousIcon();
                 }
-                if (Integer.parseInt(data[2]) < kittens.get(i).getY()) {
-                    kittens.get(i).setIconUp();
+                if (type == MessageType.EXI) {
+                    int i = Integer.parseInt(data[1]);
+                    getContentPane().remove(kittens.get(i));
+                    repaint();
+                    kittens.remove(i);
                 }
-                if (Integer.parseInt(data[2]) > kittens.get(i).getY()) {
-                    kittens.get(i).setIconDown();
-                }
-                kittens.get(i).setPosition(new Point(Integer.parseInt(data[1]), Integer.parseInt(data[2])));
-                kittens.get(i).move();
             }
         } catch (Exception e) {
             e.printStackTrace();
