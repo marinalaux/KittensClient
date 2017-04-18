@@ -14,6 +14,6 @@ public enum MessageType {
     /** Carinho em jogador */
     PET,
     /** Jogador saiu */
-    EXI,
+    EXIT,
     
 }

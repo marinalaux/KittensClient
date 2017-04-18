@@ -10,6 +10,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
 
 /**
@@ -46,7 +48,9 @@ public class KittensClient extends JFrame implements Runnable {
         initGui();
         kittens = new ArrayList<>();
         connect();
+        Thread imAliveThread = new Thread(this::imAliveMessageSender);
         Thread rendererThread = new Thread(this);
+        imAliveThread.start();
         rendererThread.start();
     }
 
@@ -122,6 +126,20 @@ public class KittensClient extends JFrame implements Runnable {
     }
     
     /**
+     * Envia mensagem de conexão ativa ao servidor
+     */
+    private void imAliveMessageSender() {
+        while (true) {
+            try {
+                out.println("imAlive");
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
      * Renderiza o jogo
      */
     private void renderer() {
@@ -156,11 +174,17 @@ public class KittensClient extends JFrame implements Runnable {
                 }
                 if (type == MessageType.PET) {
                     int i = Integer.parseInt(data[1]);
-                    kittens.get(i).setIconPet();
-                    Thread.sleep(300);
-                    kittens.get(i).restoresPreviousIcon();
+                    new Thread(() -> {
+                        kittens.get(i).setIconPet();
+                        try {
+                            Thread.sleep(300);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        kittens.get(i).restoresPreviousIcon();
+                    }).start();
                 }
-                if (type == MessageType.EXI) {
+                if (type == MessageType.EXIT) {
                     int i = Integer.parseInt(data[1]);
                     getContentPane().remove(kittens.get(i));
                     repaint();
