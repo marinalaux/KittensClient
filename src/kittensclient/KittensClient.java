@@ -1,18 +1,26 @@
 package kittensclient;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+import javax.swing.BoxLayout;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 
 /**
  * Cliente Kitty
@@ -29,6 +37,10 @@ public class KittensClient extends JFrame implements Runnable {
     private BufferedReader in;
     /** Requisições para o servidor */
     private PrintWriter out;
+    /** Painel do jogo */
+    private JPanel panel;
+    /** Painel de informações do jogo */
+    private JPanel infoPanel;
     
     public static void main(String[] args) {
         
@@ -108,8 +120,18 @@ public class KittensClient extends JFrame implements Runnable {
                 }
             }
         });
-        getContentPane().setLayout(null);
-        setSize(800, 600);
+        getContentPane().setLayout(new BorderLayout());
+        panel = new JPanel(null);
+        getContentPane().add(panel);
+        JScrollPane scroll = new JScrollPane(buildInfoPanel());
+        scroll.setPreferredSize(new Dimension(200, 600));
+        getContentPane().add(scroll, BorderLayout.EAST);
+        setSize(1000, 600);
+        try {
+            setIconImage(ImageIO.read(KittensClient.class.getResourceAsStream("/icon.png")));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -152,8 +174,16 @@ public class KittensClient extends JFrame implements Runnable {
                 if (type == MessageType.NEW) {
                     kittens.add(new Kitty());
                     int i = kittens.size() - 1;
-                    getContentPane().add(kittens.get(i));
-                    repaint();
+                    kittens.get(i).setColor(Integer.parseInt(data[1]));
+                    kittens.get(i).setMe(Boolean.parseBoolean(data[2]));
+                    kittens.get(i).setPetScore(Integer.parseInt(data[3]));
+                    kittens.get(i).setScorePanel(createScorePanel(kittens.get(i)));
+                    SwingUtilities.invokeLater(() -> {
+                        panel.add(kittens.get(i));
+                        infoPanel.add(kittens.get(i).getScorePanel());
+                        revalidate();
+                        repaint();
+                    });
                 }
                 if (type == MessageType.MOV) {
                     int i = Integer.parseInt(data[1]);
@@ -177,16 +207,21 @@ public class KittensClient extends JFrame implements Runnable {
                     new Thread(() -> {
                         kittens.get(i).setIconPet();
                         try {
-                            Thread.sleep(300);
+                            Thread.sleep(1000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                         kittens.get(i).restoresPreviousIcon();
                     }).start();
+                    kittens.get(i).setPetScore(Integer.parseInt(data[2]));
+                    kittens.get(i).getPetScoreLabel().setText(String.valueOf(kittens.get(i).getPetScore()));
+                    repaint();
                 }
                 if (type == MessageType.EXIT) {
                     int i = Integer.parseInt(data[1]);
-                    getContentPane().remove(kittens.get(i));
+                    panel.remove(kittens.get(i));
+                    infoPanel.remove(kittens.get(i).getScorePanel());
+                    revalidate();
                     repaint();
                     kittens.remove(i);
                 }
@@ -199,6 +234,49 @@ public class KittensClient extends JFrame implements Runnable {
     @Override
     public void run() {
         renderer();
+    }
+
+    /**
+     * Cria painel de informações do jogo
+     * 
+     * @return Painel de informações
+     */
+    private JPanel buildInfoPanel() {
+        infoPanel = new JPanel();
+        JLabel title = new JLabel("Pet Score");
+        title.setAlignmentX(JLabel.CENTER_ALIGNMENT);
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.add(title);
+        return infoPanel;
+    }
+
+    /**
+     * Cria painel de pontuação do jogador
+     * 
+     * @return Painel de pontuação
+     */
+    private JPanel createScorePanel(Kitty k) {
+        JPanel score = new JPanel(null);
+        JLabel player = new JLabel();
+        JLabel playerScore = new JLabel();
+        if (k.isMe()) {
+            player.setForeground(new Color(k.getColor()));
+            player.setText("You");
+        } else {
+            player.setBackground(new Color(k.getColor()));
+            player.setOpaque(true);
+        }
+        player.setBounds(10, 10, 25, 10);
+        player.setPreferredSize(new Dimension(10, 10));
+        playerScore.setBounds(40, 10, 50, 10);
+        playerScore.setPreferredSize(new Dimension(10, 10));
+        playerScore.setText(String.valueOf(k.getPetScore()));
+        k.setPetScoreLabel(playerScore);
+        score.add(player);
+        score.add(playerScore);
+        score.setPreferredSize(new Dimension(170, 20));
+        score.setMaximumSize(new Dimension(170, 20));
+        return score;
     }
     
 }
